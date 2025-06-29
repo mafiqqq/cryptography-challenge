@@ -1,16 +1,19 @@
-# 1. Application to generate an RSA key pair, key size = 2048 bits (Standard Java library can be used to generate all keys and hashes).
-# RSA
-# a. Select two large prime numbers p and q
-# b. Calculate n = p x q 
-# c. Calculate Phi(n) = (p-1) x (q-1)  -> Euler's totient function
-# d. Choose e (public exponent) such as that 2 < e < Phi(n) and co-prime gcd(e, Phi(n)) = 1
-# e. Calculate d (private exponent) such as that (e x d) mod Phi(n) = 1
-
+"""
+1. Application to generate an RSA key pair, key size = 2048 bits (Standard Java library can be used to generate all keys and hashes).
+"""
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import os
 
 def generate_rsa_key_pair():
+    """Generate RSA Key Pair
+    
+    Args:
+        None
+
+    Returns:
+        None: Function perform generation of RSA Key pair and save to file or exit on error
+    """
     try:
         # Generate a private key and choose a commonly used e value (3,17,65537)
         private_key = rsa.generate_private_key(

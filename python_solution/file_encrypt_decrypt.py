@@ -2,15 +2,20 @@
 3. Application that will encrypt and decrypt the file using the RSA key pair generated.
 """
 import argparse
-import sys
-import os
 import base64
 import json
+import os
+import sys
 from pathlib import Path
+
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
+
+AES_KEY_SIZE = 32 # 256-but
+AES_NONCE_SIZE = 12 # 96-bit GCM Mode
+OUTPUT_DIR = Path('encryption_output')
 
 def main():
     parser = argparse.ArgumentParser(description='File encryption or decryption using RSA key pair')
@@ -33,24 +38,36 @@ def main():
     if args.command == 'encrypt':
         encrypt_file(args.file, args.key)
     elif args.command == 'decrypt':
-        decrypt_file(args.file, args.key)
+        if args.file:
+            decrypt_file(args.key, args.file)
+        else:
+            decrypt_file(args.key)
     else:
         parser.print_help()
-        sys.exit(1)
+        return 1
+    
+    return 0
 
 
 def encrypt_file(input_file, public_key_file):
-    # Encrypt input_file with AES using random generated key 
-    # then encrypt AES key with the public key
+    """Encrypt the input_file
+    
+    Args:
+        input_file (str): Path to the input_file which will be encrypted
+        public_key_file (str): Path to PEM file
+
+    Returns:
+        None: Function perform decryption and save the file or exit on error
+    """
     try:
         # Load the public key
         public_key = load_public_key(public_key_file)
 
         # Generate random AES key
-        aes_key = os.urandom(32) # 256-bit
+        aes_key = os.urandom(AES_KEY_SIZE)
 
         # Using AES encryption algorithm with GCM mode of operation, generate nonce for AES-GCM
-        aes_nonce = os.urandom(12)  # 96-bit
+        aes_nonce = os.urandom(AES_NONCE_SIZE)
 
         # Read the input file
         with open(input_file, 'rb') as f:
@@ -92,15 +109,13 @@ def encrypt_file(input_file, public_key_file):
         }
         
         # Create output directory if does not exist
-        output_path = Path('encryption_output')
-        output_path.mkdir(exist_ok=True)
+        OUTPUT_DIR.mkdir(exist_ok=True)
 
-        output_file = f"{output_path}/encrypted.json"
+        output_file = OUTPUT_DIR / 'encrypted.json'
         with open(output_file, 'w') as outfile:
             json.dump(encrypted_input_data, outfile, indent=2)
         
-        print(f"File has been successfully encrypted: {output_file} ")
-        return True
+        print(f"File has been successfully encrypted: {output_file}")
 
     except FileNotFoundError as e:
         print(f'Error: File not found : {e}', sys.stderr)
@@ -110,11 +125,20 @@ def encrypt_file(input_file, public_key_file):
         sys.exit(1)
 
 
-def decrypt_file(encrypted_file_path, private_key_file):
-    # Decrypt the AES key with the RSA private_key
-    # then decrypt the input_file with the decrypted AES key
+def decrypt_file(private_key_file, encrypted_file_path=None):
+    """Decrypt the encrypted file
     
+    Args:
+        encrypted_file_path (str): Path to encrypted_data JSON file
+        private_key_file (str): Path to PEM file
+
+    Returns:
+        None: Function perform decryption and save the file or exit on error
+    """
     try:
+        if encrypted_file_path is None:
+            encrypted_file_path = str(OUTPUT_DIR / 'encrypted.json')
+
         # Load the private_key
         private_key = load_private_key(private_key_file)
         
@@ -158,14 +182,21 @@ def decrypt_file(encrypted_file_path, private_key_file):
             f.write(decrypted_input_file)
 
         print(f"File has been successfully encrypted: {decrypted_file} ")
-                
-        return True
     
     except Exception as e:
         print(f'Error: Decryption failed : {e}', sys.stderr)
         sys.exit(1)
 
+
 def load_public_key(key_file):
+    """Load RSA public key from generated PEM file
+    
+    Args:
+        key_file (str): Path to PEM file
+
+    Returns:
+        public_key (RSAPublicKey): 
+    """
     try:
         with open(key_file, 'rb') as f:
             public_key = serialization.load_pem_public_key(f.read())
@@ -176,6 +207,14 @@ def load_public_key(key_file):
 
 
 def load_private_key(key_file):
+    """Load RSA private key from generated PEM file
+    
+    Args:
+        key_file (str): Path to PEM file
+
+    Returns:
+        private_key (RSAPrivateKey): 
+    """
     try:
         with open(key_file, 'rb') as f:
             private_key = serialization.load_pem_private_key(f.read(), password=None)
@@ -186,4 +225,4 @@ def load_private_key(key_file):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
