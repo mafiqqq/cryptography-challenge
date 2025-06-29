@@ -1,7 +1,12 @@
-# 3. Application that will encrypt and decrypt the file using the RSA key pair generated.
+"""
+3. Application that will encrypt and decrypt the file using the RSA key pair generated.
+"""
 import argparse
 import sys
 import os
+import base64
+import json
+from pathlib import Path
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
@@ -44,21 +49,20 @@ def encrypt_file(input_file, public_key_file):
         # Generate random AES key
         aes_key = os.urandom(32) # 256-bit
 
-        # Using AES encryption algorithm with CBC mode of operation, generate random Initialization Vector (IV)
-        # IV - Random values that ensures each encryption with same key produces different ciphertext
-        iv = os.urandom(16)  # 128-bit
+        # Using AES encryption algorithm with GCM mode of operation, generate nonce for AES-GCM
+        aes_nonce = os.urandom(12)  # 96-bit
 
         # Read the input file
         with open(input_file, 'rb') as f:
-            file_data = f.read()
+            input_data = f.read()
 
-        # Encrypt file_data with AES
-        cipher = Cipher(algorithms.AES(aes_key), modes.GCM(iv))
+        # Create an AES-GCM cipher object
+        cipher = Cipher(algorithms.AES(aes_key), modes.GCM(aes_nonce), backend=default_backend())
+        
+        # Encrypt input_data
         encryptor = cipher.encryptor()
-        ciphertext_aes = encryptor.update(file_data) + encryptor.finalize()
-        tag = encryptor.tag
-
-
+        encrypted_data = encryptor.update(input_data) + encryptor.finalize()
+        auth_tag = encryptor.tag
 
         # Encrypt the AES key with RSA public_key
         # use OAEP (Optimal Asymmetric Encryption Padding) that provides probabilistic encryption
@@ -71,13 +75,32 @@ def encrypt_file(input_file, public_key_file):
             )
         )
 
+        # Extract extension of input_file
+        filename = os.path.basename(input_file)
+        file_extension = os.path.splitext(input_file)[1]
+
         # Output file for encrypted input_file
-        encrypted_file_data = {
-            'encrypted_aes_key': encrypted_aes_key,
-
+        encrypted_input_data = {
+            'algorithm': 'RSA-OAEP + AES-256-GCM',
+            'file_size': len(input_data),
+            'encrypted_aes_key': base64.b64encode(encrypted_aes_key).decode('utf-8'),
+            'aes_nonce': base64.b64encode(aes_nonce).decode('utf-8'),
+            'auth_tag': base64.b64encode(auth_tag).decode('utf-8'),
+            'encrypted_input': base64.b64encode(encrypted_data).decode('utf-8'),
+            'filename': filename,
+            'file_extension':  file_extension,
         }
+        
+        # Create output directory if does not exist
+        output_path = Path('encryption_output')
+        output_path.mkdir(exist_ok=True)
 
-        return encrypted_aes_key, iv, ciphertext_aes
+        output_file = f"{output_path}/encrypted.json"
+        with open(output_file, 'w') as outfile:
+            json.dump(encrypted_input_data, outfile, indent=2)
+        
+        print(f"File has been successfully encrypted: {output_file} ")
+        return True
 
     except FileNotFoundError as e:
         print(f'Error: File not found : {e}', sys.stderr)
@@ -87,7 +110,7 @@ def encrypt_file(input_file, public_key_file):
         sys.exit(1)
 
 
-def decrypt_file(encrypted_aes_key, iv, private_key_file):
+def decrypt_file(encrypted_file_path, private_key_file):
     # Decrypt the AES key with the RSA private_key
     # then decrypt the input_file with the decrypted AES key
     
@@ -96,6 +119,14 @@ def decrypt_file(encrypted_aes_key, iv, private_key_file):
         private_key = load_private_key(private_key_file)
         
         # Read the encrypted file
+        with open(encrypted_file_path, 'r') as f:
+            encrypted_data = json.load(f)
+
+        # Decode the encrypted_data
+        encrypted_aes_key = base64.b64decode(encrypted_data['encrypted_aes_key'])
+        aes_nonce = base64.b64decode(encrypted_data['aes_nonce'])
+        auth_tag = base64.b64decode(encrypted_data['auth_tag'])
+        encrypted_input = base64.b64decode(encrypted_data['encrypted_input'])
 
         # Decrypt AES key with private_key
         decrypted_aes_key = private_key.decrypt(
@@ -108,15 +139,31 @@ def decrypt_file(encrypted_aes_key, iv, private_key_file):
         )
 
         # Decrypt the input_file with decrypted_aes_key
-        cipher = Cipher(algorithms.AES(decrypted_aes_key), modes.CBC(iv), backend=default_backend)
+        cipher = Cipher(algorithms.AES(decrypted_aes_key), modes.GCM(aes_nonce, auth_tag), backend=default_backend)
         decryptor = cipher.decryptor()
-        decrypted_padded_data = decryptor.update(ciphertext_aes) + decryptor.finalize()
-        decrypted_input_file = unpadder.update(decrypted_padded_data) + unpadder.finalize()
+        
+        decrypted_input_file = decryptor.update(encrypted_input) + decryptor.finalize()
 
-        return decrypted_input_file
+        # Sanity check - Verify if file size are the same
+        if (len(decrypted_input_file) != encrypted_data['file_size']):
+            raise ValueError(f"File size mismatch - Decrypted file size: {len(decrypted_input_file)}, Encrypted file size: {encrypted_data['file_size']}")
+        
+        # Create output directory if does not exist
+        output_path = Path('encryption_output')
+        output_path.mkdir(exist_ok=True)
+
+        # Write the decrypted input_file
+        decrypted_file = f"{output_path}/decrypted_{encrypted_data['filename']}"
+        with open(decrypted_file, 'wb') as f:
+            f.write(decrypted_input_file)
+
+        print(f"File has been successfully encrypted: {decrypted_file} ")
+                
+        return True
     
     except Exception as e:
-        pass
+        print(f'Error: Decryption failed : {e}', sys.stderr)
+        sys.exit(1)
 
 def load_public_key(key_file):
     try:
