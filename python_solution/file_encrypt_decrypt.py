@@ -1,7 +1,11 @@
 # 3. Application that will encrypt and decrypt the file using the RSA key pair generated.
 import argparse
 import sys
-from cryptography.hazmat.primitives import serialization
+import os
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import padding
 
 def main():
     parser = argparse.ArgumentParser(description='File encryption or decryption using RSA key pair')
@@ -31,18 +35,88 @@ def main():
 
 
 def encrypt_file(input_file, public_key_file):
+    # Encrypt input_file with AES using random generated key 
+    # then encrypt AES key with the public key
     try:
         # Load the public key
         public_key = load_public_key(public_key_file)
 
-        # Generate a 
+        # Generate random AES key
+        aes_key = os.urandom(32) # 256-bit
+
+        # Using AES encryption algorithm with CBC mode of operation, generate random Initialization Vector (IV)
+        # IV - Random values that ensures each encryption with same key produces different ciphertext
+        iv = os.urandom(16)  # 128-bit
+
+        # Read the input file
+        with open(input_file, 'rb') as f:
+            file_data = f.read()
+
+        # Encrypt file_data with AES
+        cipher = Cipher(algorithms.AES(aes_key), modes.GCM(iv))
+        encryptor = cipher.encryptor()
+        ciphertext_aes = encryptor.update(file_data) + encryptor.finalize()
+        tag = encryptor.tag
+
+
+
+        # Encrypt the AES key with RSA public_key
+        # use OAEP (Optimal Asymmetric Encryption Padding) that provides probabilistic encryption
+        encrypted_aes_key = public_key.encrypt(
+            aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+
+        # Output file for encrypted input_file
+        encrypted_file_data = {
+            'encrypted_aes_key': encrypted_aes_key,
+
+        }
+
+        return encrypted_aes_key, iv, ciphertext_aes
+
+    except FileNotFoundError as e:
+        print(f'Error: File not found : {e}', sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        print(f'')
+        print(f'Error: Encryption failed : {e}', sys.stderr)
+        sys.exit(1)
 
 
-def decrypt_file():
-    print('a')
+def decrypt_file(encrypted_aes_key, iv, private_key_file):
+    # Decrypt the AES key with the RSA private_key
+    # then decrypt the input_file with the decrypted AES key
+    
+    try:
+        # Load the private_key
+        private_key = load_private_key(private_key_file)
+        
+        # Read the encrypted file
 
+        # Decrypt AES key with private_key
+        decrypted_aes_key = private_key.decrypt(
+            encrypted_aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+
+        # Decrypt the input_file with decrypted_aes_key
+        cipher = Cipher(algorithms.AES(decrypted_aes_key), modes.CBC(iv), backend=default_backend)
+        decryptor = cipher.decryptor()
+        decrypted_padded_data = decryptor.update(ciphertext_aes) + decryptor.finalize()
+        decrypted_input_file = unpadder.update(decrypted_padded_data) + unpadder.finalize()
+
+        return decrypted_input_file
+    
+    except Exception as e:
+        pass
 
 def load_public_key(key_file):
     try:
