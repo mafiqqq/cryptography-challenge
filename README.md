@@ -63,4 +63,7 @@ project
 │   │   file_encrypt_decrypt.py
 │   │   generate_hash_sha256.py
 │   │   generate_rsa_key.py
+└───────output_files
+│   |   │   public_key.pem
+│   |   │   private_key.pem
 ```

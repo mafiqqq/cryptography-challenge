@@ -1,9 +1,12 @@
 """
 1. Application to generate an RSA key pair, key size = 2048 bits (Standard Java library can be used to generate all keys and hashes).
 """
+import os
+import sys
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-import os
+
 
 def generate_rsa_key_pair():
     """Generate RSA Key Pair
@@ -41,21 +44,29 @@ def generate_rsa_key_pair():
         try:
             os.makedirs('output_files', exist_ok=True)
 
-            with open('output_files/private_key.pem', 'wb') as f:
+            public_key_path = 'output_files/public_key.pem'
+            private_key_path = 'output_files/private_key.pem'
+            if os.path.exists(public_key_path):
+                os.remove(public_key_path)
+            
+            if os.path.exists(private_key_path):
+                os.remove(private_key_path)
+
+            with open(private_key_path, 'wb') as f:
                 f.write(private_pem)
 
-            with open('output_files/public_key.pem', 'wb') as f:
+            with open(public_key_path, 'wb') as f:
                 f.write(public_pem)
             
             return private_key, public_key
 
         except PermissionError as e:
-            print(f"Permission error when writing key file: {e}")
+            print(f"Permission error when writing key file: {e}", sys.stderr)
         except IOError as e:
-            print(f"I/O error when writing key file: {e}") 
+            print(f"I/O error when writing key file: {e}", sys.stderr) 
 
     except Exception as e:
-        print(f"Unexpected error during key generation: {e}")
+        print(f"Unexpected error during RSA key generation: {e}", sys.stderr)
 
 
 if __name__ == "__main__":
