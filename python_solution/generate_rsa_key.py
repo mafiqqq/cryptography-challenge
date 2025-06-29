@@ -44,18 +44,10 @@ def generate_rsa_key_pair():
         try:
             os.makedirs('output_files', exist_ok=True)
 
-            public_key_path = 'output_files/public_key.pem'
-            private_key_path = 'output_files/private_key.pem'
-            if os.path.exists(public_key_path):
-                os.remove(public_key_path)
-            
-            if os.path.exists(private_key_path):
-                os.remove(private_key_path)
-
-            with open(private_key_path, 'wb') as f:
+            with open('output_files/private_key.pem', 'wb') as f:
                 f.write(private_pem)
 
-            with open(public_key_path, 'wb') as f:
+            with open('output_files/public_key.pem', 'wb') as f:
                 f.write(public_pem)
             
             return private_key, public_key

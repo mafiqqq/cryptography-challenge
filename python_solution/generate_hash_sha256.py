@@ -22,7 +22,7 @@ def calculate_hash(file_path, chunk_size=65536):
             while byte_chunk := f.read(chunk_size):
                 sha256.update(byte_chunk)
         
-        print(sha256.hexdigest())
+        print(f"Hash has been generated in HEX format: {sha256.hexdigest()}")
 
     except FileNotFoundError:
         print(f"Error: File '{file_path}' not found.", file=stderr)
