@@ -59,6 +59,8 @@ python file_encrypt_decrypt.py decrypt -f path/to/file/encryption_ouput/encrypti
 
 On another branch `dev_java_solution` I'm working on implementing the solution in JAVA environment. Understanding on how to use standard Java library and then translating to use `bouncycastle` library
 
+> Note: Feel free to checkout branch `dev_java_solution` to test the code using JAVA solution.
+ 
 To-do list:
 - File signing
 - Key Lifecycle Management
