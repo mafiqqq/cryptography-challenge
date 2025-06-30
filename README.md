@@ -55,6 +55,17 @@ python file_encrypt_decrypt.py decrypt -f path/to/file/encryption_ouput/encrypti
 ```
 > Note: `encryption_ouput/encryption.json` file should be the argument parameter for the file. Argument `-f` is *Optional*. By default it will point to the newly created `encryption_ouput/encryption.json`
 
+### Dev Branch : dev_java_solution
+
+On another branch `dev_java_solution` I'm working on implementing the solution in JAVA environment. Understanding on how to use standard Java library and then translating to use `bouncycastle` library
+
+To-do list:
+- File signing
+- Key Lifecycle Management
+- Key Rotation
+- Cloud AWS KMS learning
+
+
 ### Project Structure
 ```
 project
@@ -68,13 +79,3 @@ project
 │   |   │   public_key.pem
 │   |   │   private_key.pem
 ```
-
-### Dev Branch : dev_java_solution
-
-On another branch `dev_java_solution` I'm working on implementing the solution in JAVA environment. Understanding on how to use standard Java library and then translating to use `bouncycastle` library
-
-To-do list:
-- File signing
-- Key Lifecycle Management
-- Key Rotation
-- Cloud AWS KMS learning
