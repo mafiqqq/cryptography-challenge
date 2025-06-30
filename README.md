@@ -53,6 +53,7 @@ python file_encrypt_decrypt.py encrypt -f path/to/your/file -k output_files/publ
 ```bash
 python file_encrypt_decrypt.py decrypt -f path/to/file/encryption_ouput/encryption.json -k output_files/private_key.pem
 ```
+> Note: `encryption_ouput/encryption.json` file should be the argument parameter for the file. Argument `-f` is *Optional*. By default it will point to the newly created `encryption_ouput/encryption.json`
 
 ### Project Structure
 ```
