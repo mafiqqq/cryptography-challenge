@@ -68,3 +68,13 @@ project
 │   |   │   public_key.pem
 │   |   │   private_key.pem
 ```
+
+### Dev Branch : dev_java_solution
+
+On another branch `dev_java_solution` I'm working on implementing the solution in JAVA environment. Understanding on how to use standard Java library and then translating to use `bouncycastle` library
+
+To-do list:
+- File signing
+- Key Lifecycle Management
+- Key Rotation
+- Cloud AWS KMS learning
