@@ -27,6 +27,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class FileEncryptDecrypt {
     
@@ -71,13 +72,47 @@ public class FileEncryptDecrypt {
 
         Files.write(outPath, byteBuffer.array());
     }
+    
+    public static void decryptFile(Path encryptedFile, Path outFile, PrivateKey privateKey) throws Exception {
+        // Read the encrypted output
+        byte[] encryptedData = Files.readAllBytes(encryptedFile);
+        ByteBuffer byteBuffer = ByteBuffer.wrap(encryptedData);
+
+        // Extract encrypted key size
+        int encryptedKeyLength = byteBuffer.getInt();
+
+        // Extract encrypted AES key
+        byte[] encryptedAesKey = new byte[encryptedKeyLength];
+        byteBuffer.get(encryptedAesKey);
+
+        // Extract nonce 
+        byte[] nonce = new byte[GCM_NONCE_LENGTH];
+        byteBuffer.get(nonce);
+
+        // Extract encrypted content
+        byte[] encryptedContent = new byte[byteBuffer.remaining()];
+        byteBuffer.get(encryptedContent);
+
+        // Decrypt AES key using RSA private key
+        Cipher rsaCipher = Cipher.getInstance("RSA");
+        rsaCipher.init(Cipher.DECRYPT_MODE, privateKey);
+        byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
+        SecretKey aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+
+        // Decrypt content with AES-GCM Mode
+        Cipher aesCipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec gcmParams = new GCMParameterSpec(GCM_TAG_LENGTH*8, nonce);
+        aesCipher.init(Cipher.DECRYPT_MODE, aesKey, gcmParams);
+        byte[] decryptedContent = aesCipher.doFinal(encryptedContent);
+
+        // Write to output file
+        Files.write(outFile, decryptedContent);
+    }
 
     public static PublicKey loadPublicKey(String filePath) throws Exception {
         byte[] keyBytes;
 
-        String pemContent = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
-        keyBytes = pemToBytes(pemContent, "-----BEGIN RSA PUBLIC KEY-----","-----END RSA PUBLIC KEY-----");
-        
+        keyBytes = Files.readAllBytes(Paths.get(filePath));
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
@@ -86,9 +121,9 @@ public class FileEncryptDecrypt {
 
 
     public static PrivateKey loadPrivateKey(String filePath) throws Exception {
-        String pemContent = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
-        byte[] keyBytes = pemToBytes(pemContent, "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
+        byte[] keyBytes;
 
+        keyBytes = Files.readAllBytes(Paths.get(filePath));
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
@@ -96,34 +131,25 @@ public class FileEncryptDecrypt {
     }
 
 
-    public static byte[] pemToBytes(String pemContent, String begin, String end) throws IOException {
-        int beginIndex = pemContent.indexOf(begin);
-        int endIndex = pemContent.indexOf(end);
-
-        if (beginIndex == -1 || endIndex == -1) {
-            throw new IOException("Invalid PEM file format");
-        }
-
-        String base64Content = pemContent.substring(beginIndex + begin.length(), endIndex)
-        .replaceAll("\\s", "");
-
-        return Base64.getDecoder().decode(base64Content);
-    }
-
     public static void main(String[] args) throws Exception {
         // Declare default filePath
         String filePath = "java_solution/AMD image file.JPG";
+
+        // Declare output decrypted filePath
+        String decryptedFilePath = "java_solution/decrypted_AMD image file.JPG";
 
         // Declare default outputPath
         String outPath = "java_solution/encrypted_output";
 
         // Load the public key
-        PublicKey publicKey = loadPublicKey(filePath);
+        PublicKey publicKey = loadPublicKey("java_solution/output_files/public_key.der");
 
         // Load the private key
-        PrivateKey privateKey = loadPrivateKey(filePath);
+        PrivateKey privateKey = loadPrivateKey("java_solution/output_files/private_key.der");
 
         encryptFile(Paths.get(filePath), Paths.get(outPath), publicKey);
+
+        decryptFile(Paths.get(outPath), Paths.get(decryptedFilePath), privateKey);
         
     }
 }
