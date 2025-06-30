@@ -53,6 +53,20 @@ python file_encrypt_decrypt.py encrypt -f path/to/your/file -k output_files/publ
 ```bash
 python file_encrypt_decrypt.py decrypt -f path/to/file/encryption_ouput/encryption.json -k output_files/private_key.pem
 ```
+> Note: `encryption_ouput/encryption.json` file should be the argument parameter for the file. Argument `-f` is *Optional*. By default it will point to the newly created `encryption_ouput/encryption.json`
+
+### Dev Branch : dev_java_solution
+
+On another branch `dev_java_solution` I'm working on implementing the solution in JAVA environment. Understanding on how to use standard Java library and then translating to use `bouncycastle` library
+
+> Note: Feel free to checkout branch `dev_java_solution` to test the code using JAVA solution.
+ 
+To-do list:
+- File signing
+- Key Lifecycle Management
+- Key Rotation
+- Cloud AWS KMS learning
+
 
 ### Project Structure
 ```

@@ -30,7 +30,7 @@ def main():
 
     # Decrypt command
     decrypt_parser = subparser.add_parser('decrypt', help='Decrypt a file')
-    decrypt_parser.add_argument('-f', '--file', required=True, help='File to be decrypted')
+    decrypt_parser.add_argument('-f', '--file', required=False, help='File to be decrypted')
     decrypt_parser.add_argument('-k', '--key', required=True, help='Private key file')
 
     args = parser.parse_args()
@@ -173,11 +173,10 @@ def decrypt_file(private_key_file, encrypted_file_path=None):
             raise ValueError(f"File size mismatch - Decrypted file size: {len(decrypted_input_file)}, Encrypted file size: {encrypted_data['file_size']}")
         
         # Create output directory if does not exist
-        output_path = Path('encryption_output')
-        output_path.mkdir(exist_ok=True)
+        OUTPUT_DIR.mkdir(exist_ok=True)
 
         # Write the decrypted input_file
-        decrypted_file = f"{output_path}/decrypted_{encrypted_data['filename']}"
+        decrypted_file = f"{OUTPUT_DIR}/decrypted_{encrypted_data['filename']}"
         with open(decrypted_file, 'wb') as f:
             f.write(decrypted_input_file)
 
